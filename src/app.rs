@@ -5,7 +5,7 @@ use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
 use transmission_rpc::{
-    types::{Torrent, TorrentGetField, Torrents},
+    types::{Torrent, TorrentGetField},
     TransClient,
 };
 use url::Url;
@@ -41,21 +41,22 @@ impl Into<MyTorrent> for &Torrent {
 }
 
 #[server(GetTorrents, "/api", "GetJson")]
-pub async fn get_torrents() -> Result<Vec<MyTorrent>, ServerFnError> {
+pub async fn get_torrents() -> Result<Vec<MyTorrent>, ServerFnError<String>> {
     logging::log!("Getting torrents");
     let mut client = TransClient::new(
         Url::parse("http://plutonium:9091/transmission/rpc").expect("Couldn't parse url"),
     );
     let response = client
         .torrent_get(Some(vec![TorrentGetField::Id, TorrentGetField::Name]), None)
-        .await;
-    match response {
-        Ok(_) => logging::log!("Yay!"),
-        Err(_) => logging::error!("Oh no!"),
-    }
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+    println!("{:?}", response.arguments.torrents.first());
+    // match response {
+    //     Ok(_) => logging::log!("Yay!"),
+    //     Err(_) => logging::error!("Oh no!"),
+    // }
     // println!("{:?}", response);
     Ok(response
-        .unwrap()
         .arguments
         .torrents
         .iter()
@@ -69,7 +70,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/transmission-leptos-axum.css"/>
+        <Stylesheet id="leptos" href="/pkg/transmission-leptos.css"/>
 
         // sets the document title
         <Title text="Welcome to Leptos"/>
@@ -95,7 +96,20 @@ fn TorrentCount() -> impl IntoView {
 
     view! {
         <Suspense fallback=move || view! { "Loading..." }>
-            <p>Count: {move || torrent_count.get().map(|c| c.unwrap().len())}</p>
+            <p>
+                Count:
+                {move || {
+                    torrent_count
+                        .get()
+                        .map(|c| {
+                            c.unwrap()
+                                .iter()
+                                .map(move |t| view! { <div>{t.name.clone()}</div> })
+                                .collect::<Vec<_>>()
+                        })
+                }}
+
+            </p>
         </Suspense>
     }
 

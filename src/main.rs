@@ -4,8 +4,8 @@ async fn main() {
     use axum::Router;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use transmission_leptos_axum::app::*;
-    use transmission_leptos_axum::fileserv::file_and_error_handler;
+    use transmission_leptos::app::*;
+    use transmission_leptos::fileserv::file_and_error_handler;
 
     console_error_panic_hook::set_once();
 
