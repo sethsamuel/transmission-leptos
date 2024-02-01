@@ -2,9 +2,10 @@ use crate::error_template::{AppError, ErrorTemplate};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use serde::{Deserialize, Serialize};
 
 use transmission_rpc::{
-    types::{Torrent, TorrentGetField},
+    types::{Torrent, TorrentGetField, Torrents},
     TransClient,
 };
 use url::Url;
@@ -24,21 +25,42 @@ pub async fn port_test() -> Result<String, ServerFnError> {
     Ok(format!("Response ok? {:?}", response.is_ok()))
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MyTorrent {
+    pub id: Option<i64>,
+    pub name: Option<String>,
+}
+
+impl Into<MyTorrent> for &Torrent {
+    fn into(self) -> MyTorrent {
+        MyTorrent {
+            id: self.id,
+            name: self.name.clone(),
+        }
+    }
+}
+
 #[server(GetTorrents, "/api", "GetJson")]
-pub async fn get_torrents() -> Result<usize, ServerFnError> {
+pub async fn get_torrents() -> Result<Vec<MyTorrent>, ServerFnError> {
     logging::log!("Getting torrents");
     let mut client = TransClient::new(
         Url::parse("http://plutonium:9091/transmission/rpc").expect("Couldn't parse url"),
     );
     let response = client
-        .torrent_get(Some(vec![TorrentGetField::Id]), None)
+        .torrent_get(Some(vec![TorrentGetField::Id, TorrentGetField::Name]), None)
         .await;
     match response {
         Ok(_) => logging::log!("Yay!"),
         Err(_) => logging::error!("Oh no!"),
     }
     // println!("{:?}", response);
-    Ok(response.unwrap().arguments.torrents.iter().count())
+    Ok(response
+        .unwrap()
+        .arguments
+        .torrents
+        .iter()
+        .map(|t| t.into())
+        .collect())
 }
 
 #[component]
@@ -69,35 +91,15 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn TorrentCount() -> impl IntoView {
-    let (count, set_count) = create_signal(0);
-    let on_click = move |_| {
-        let torrent_count =
-            create_local_resource(|| (), |_| async move { get_torrents().await }).get();
+    let torrent_count = create_resource(|| (), |_| async move { get_torrents().await });
 
-        match torrent_count {
-            None => {
-                logging::log!("no count");
-            }
-            Some(c) => {
-                logging::log!("count");
-                set_count(c.unwrap());
-            }
-        }
-    };
-
-    let torrent_count = create_resource(|| (), |_| async move { get_torrents().await }).get();
-
-    match torrent_count {
-        None => {
-            logging::log!("no count");
-        }
-        Some(c) => {
-            logging::log!("count");
-            set_count(c.unwrap());
-        }
+    view! {
+        <Suspense fallback=move || view! { "Loading..." }>
+            <p>Count: {move || torrent_count.get().map(|c| c.unwrap().len())}</p>
+        </Suspense>
     }
 
-    view! { <button on:click=on_click>"Click Me: " {move || count}</button> }
+    // view! { <button on:click=on_click>"Click Me: " {move || torrent_count}</button> }
 }
 
 /// Renders the home page of your application.
@@ -107,8 +109,7 @@ fn HomePage() -> impl IntoView {
 
     view! {
         <h1>"Welcome to Leptos!"</h1>
-        <Suspense>
-            <TorrentCount/>
-        </Suspense>
+
+        <TorrentCount/>
     }
 }

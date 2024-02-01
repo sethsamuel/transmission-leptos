@@ -22,6 +22,7 @@ tracing = { version = "0.1", optional = true }
 http = "1"
 transmission-rpc = "0.4.2"
 url = "2.5.0"
+serde = { version = "1.0.196", features = ["derive"] }
 
 [features]
 default = ["ssr", "hydrate"]
