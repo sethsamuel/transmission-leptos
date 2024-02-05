@@ -90,25 +90,37 @@ pub fn App() -> impl IntoView {
     }
 }
 
+use stylers::style_str;
+
 #[component]
 fn TorrentCount() -> impl IntoView {
     let torrent_count = create_resource(|| (), |_| async move { get_torrents().await });
 
-    view! {
+    let (class_name, style_val) = style_str! {
+        div{
+            color: blue;
+            text-align: left;
+        }
+    };
+
+    view! { class=class_name,
         <Suspense fallback=move || view! { "Loading..." }>
+            <style>{style_val}</style>
             <p>
                 Count:
-                {move || {
-                    torrent_count
-                        .get()
-                        .map(|c| {
-                            c.unwrap()
-                                .iter()
-                                .map(move |t| view! { <div>{t.name.clone()}</div> })
-                                .collect::<Vec<_>>()
-                        })
-                }}
+                <div>
+                    {move || {
+                        torrent_count
+                            .get()
+                            .map(|c| {
+                                c.unwrap()
+                                    .iter()
+                                    .map(move |t| view! { <div class="row">{t.name.clone()}</div> })
+                                    .collect::<Vec<_>>()
+                            })
+                    }}
 
+                </div>
             </p>
         </Suspense>
     }

@@ -23,6 +23,10 @@ http = "1"
 transmission-rpc = "0.4.2"
 url = "2.5.0"
 serde = { version = "1.0.196", features = ["derive"] }
+stylers = "0.3.2"
+
+[build-dependencies]
+stylers = "0.3.2"
 
 [features]
 default = ["ssr", "hydrate"]
