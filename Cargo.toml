@@ -117,3 +117,5 @@ lib-default-features = false
 #
 # Optional. Defaults to "release".
 lib-profile-release = "wasm-release"
+
+bin-target-triple = "aarch64-apple-darwin"
