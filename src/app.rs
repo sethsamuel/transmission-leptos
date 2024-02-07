@@ -1,3 +1,5 @@
+use std::vec;
+
 use crate::error_template::{AppError, ErrorTemplate};
 use leptos::*;
 use leptos_meta::*;
@@ -94,34 +96,53 @@ use stylers::style_str;
 
 #[component]
 fn TorrentCount() -> impl IntoView {
-    let torrent_count = create_resource(|| (), |_| async move { get_torrents().await });
+    let (filter, set_filter) = create_signal("".to_string());
+
+    let torrents = create_resource(|| (), |_| async move { get_torrents().await });
+
+    let sorted = move || {
+        torrents
+            .get()
+            .map(|r| match r {
+                Ok(v) => {
+                    let mut v = v.clone();
+                    v.sort_by(|a, b| a.name.partial_cmp(&b.name).expect("Couldn't sort"));
+                    v
+                }
+                Err(_) => vec![],
+            })
+            .unwrap_or(vec![])
+    };
 
     let (class_name, style_val) = style_str! {
-        div{
-            color: blue;
+        section {
+
+        }
+        div {
+            padding: var(--size-gap);
             text-align: left;
+            border-bottom: 1px solid gray;
         }
     };
 
-    view! { class=class_name,
+    view! {
         <Suspense fallback=move || view! { "Loading..." }>
             <style>{style_val}</style>
-            <p>
-                Count:
-                <div>
-                    {move || {
-                        torrent_count
-                            .get()
-                            .map(|c| {
-                                c.unwrap()
-                                    .iter()
-                                    .map(move |t| view! { <div class="row">{t.name.clone()}</div> })
-                                    .collect::<Vec<_>>()
-                            })
-                    }}
+            <input on:input=move |ev| set_filter(event_target_value(&ev)) prop:value=filter/>
+            <section class=class_name>
+                {move || {
+                    sorted()
+                        .iter()
+                        .filter(move |t| {
+                            t.name.clone().unwrap_or("".to_string()).contains(&filter())
+                        })
+                        .map(move |t| {
+                            view! { <div class=class_name>{t.name.clone()}</div> }
+                        })
+                        .collect::<Vec<_>>()
+                }}
 
-                </div>
-            </p>
+            </section>
         </Suspense>
     }
 
@@ -133,9 +154,5 @@ fn TorrentCount() -> impl IntoView {
 fn HomePage() -> impl IntoView {
     // Creates a reactive value to update the button
 
-    view! {
-        <h1>"Welcome to Leptos!"</h1>
-
-        <TorrentCount/>
-    }
+    view! { <TorrentCount/> }
 }
