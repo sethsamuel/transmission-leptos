@@ -101,8 +101,7 @@ fn TorrentCount() -> impl IntoView {
     let torrents = create_resource(|| (), |_| async move { get_torrents().await });
 
     let sorted = move || {
-        torrents
-            .get()
+        torrents()
             .map(|r| match r {
                 Ok(v) => {
                     let mut v = v.clone();
@@ -114,38 +113,38 @@ fn TorrentCount() -> impl IntoView {
             .unwrap_or(vec![])
     };
 
+    let filtered = move || {
+        sorted()
+            .into_iter()
+            .filter(|t| {
+                t.name
+                    .clone()
+                    .unwrap_or("".to_string())
+                    .to_lowercase()
+                    .contains(&filter().to_lowercase())
+            })
+            .collect::<Vec<MyTorrent>>()
+    };
+
     let (class_name, style_val) = style_str! {
         section {
 
         }
-        div {
+        section div {
             padding: var(--size-gap);
             text-align: left;
             border-bottom: 1px solid gray;
         }
     };
 
-    view! {
+    view! { class=class_name,
         <Suspense fallback=move || view! { "Loading..." }>
             <style>{style_val}</style>
             <input on:input=move |ev| set_filter(event_target_value(&ev)) prop:value=filter/>
-            <section class=class_name>
-                {move || {
-                    sorted()
-                        .iter()
-                        .filter(|t| {
-                            t.name
-                                .clone()
-                                .unwrap_or("".to_string())
-                                .to_lowercase()
-                                .contains(&filter().to_lowercase())
-                        })
-                        .map(move |t| {
-                            view! { <div class=class_name>{t.name.clone()}</div> }
-                        })
-                        .collect::<Vec<_>>()
-                }}
-
+            <section>
+                <For each=filtered key=move |t| (t.name.clone(), class_name) let:t>
+                    <div>{t.name.clone()}</div>
+                </For>
             </section>
         </Suspense>
     }
