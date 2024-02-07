@@ -133,8 +133,12 @@ fn TorrentCount() -> impl IntoView {
                 {move || {
                     sorted()
                         .iter()
-                        .filter(move |t| {
-                            t.name.clone().unwrap_or("".to_string()).contains(&filter())
+                        .filter(|t| {
+                            t.name
+                                .clone()
+                                .unwrap_or("".to_string())
+                                .to_lowercase()
+                                .contains(&filter().to_lowercase())
                         })
                         .map(move |t| {
                             view! { <div class=class_name>{t.name.clone()}</div> }
